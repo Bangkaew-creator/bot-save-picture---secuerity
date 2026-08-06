@@ -31,6 +31,12 @@ const blobClient = new line.messagingApi.MessagingApiBlobClient({
 
 const app = express();
 
+// สร้างหน้าเว็บเปล่าๆ ให้ UptimeRobot เช็กว่าบอทตื่นอยู่
+app.get('/', (req, res) => {
+    res.status(200).send('บอทตื่นแล้วจ้า!');
+});
+
+
 // ระบบความจำสั้น: เก็บสถานะ "รอรับรูป" (5 นาที)
 const pendingUsers = {}; 
 
