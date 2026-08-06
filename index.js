@@ -112,7 +112,10 @@ app.post('/webhook', line.middleware(lineConfig), (req, res) => {
 
 // 4. ฟังก์ชันหลัก: ประมวลผลข้อความและรูปภาพ
 async function handleEvent(event) {
-  const userId = event.source.userId;
+  // 💡 แก้ไขจุดที่ 1: ป้องกันบอทพังหาก รปภ. ยังไม่ได้แอดบอทเป็นเพื่อน
+  // ให้ดึง ID กลุ่มมาใช้แทน หากไม่มี ID ส่วนตัว
+  const senderId = event.source.userId || event.source.groupId || "unknown_id";
+  const reportedBy = event.source.userId || "ไม่ระบุ (ยังไม่ได้แอดบอทเป็นเพื่อน)";
 
   // กรณีเป็น "ข้อความ"
   if (event.type === 'message' && event.message.type === 'text') {
@@ -122,10 +125,10 @@ async function handleEvent(event) {
         const parsedData = parseShiftReport(text);
         const docRef = await db.collection('shift_reports').add({
             ...parsedData,
-            reported_by_userId: userId,
+            reported_by_userId: reportedBy, // 💡 แก้ไขจุดที่ 2: ใช้ตัวแปรใหม่ ป้องกัน Firebase พัง
             timestamp: FieldValue.serverTimestamp()
         });
-        setPendingUser(userId, docRef.id, 'shift_reports');
+        setPendingUser(senderId, docRef.id, 'shift_reports'); // ใช้ senderId แบบใหม่
         return client.replyMessage({
             replyToken: event.replyToken,
             messages: [{ type: 'text', text: 'บันทึกข้อมูลเข้าเวรแล้ว กรุณาส่งรูปภาพประกอบภายใน 5 นาทีครับ' }]
@@ -135,10 +138,10 @@ async function handleEvent(event) {
         const parsedData = parsePatrolReport(text);
         const docRef = await db.collection('patrol_reports').add({
             ...parsedData,
-            reported_by_userId: userId,
+            reported_by_userId: reportedBy, // 💡 แก้ไขจุดที่ 2: ใช้ตัวแปรใหม่ ป้องกัน Firebase พัง
             timestamp: FieldValue.serverTimestamp()
         });
-        setPendingUser(userId, docRef.id, 'patrol_reports');
+        setPendingUser(senderId, docRef.id, 'patrol_reports'); // ใช้ senderId แบบใหม่
         return client.replyMessage({
             replyToken: event.replyToken,
             messages: [{ type: 'text', text: 'บันทึกรายงานเหตุการณ์แล้ว กรุณาส่งรูปภาพ (สูงสุด 10 รูป) ภายใน 5 นาทีครับ' }]
@@ -148,7 +151,7 @@ async function handleEvent(event) {
 
   // กรณีเป็น "รูปภาพ"
   if (event.type === 'message' && event.message.type === 'image') {
-      const userState = pendingUsers[userId];
+      const userState = pendingUsers[senderId]; // 💡 อ้างอิงจากรหัสผู้ส่งหรือกลุ่ม
       if (!userState) return Promise.resolve(null);
 
       try {
