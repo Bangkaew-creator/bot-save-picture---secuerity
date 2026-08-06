@@ -64,13 +64,38 @@ function parseShiftReport(text) {
 }
 
 function parsePatrolReport(text) {
-    const lines = text.split('\n');
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l.length > 0);
     let time = "ไม่ระบุ", guardName = "ไม่ระบุ";
+    let guardList = [];
+    let dateLine = "";
+    let timeLine = "";
 
-    lines.forEach(line => {
-        if (line.includes('เวลา')) time = line.replace('เวลา', '').trim();
-        if (line.includes('นาย') || line.includes('นาง')) guardName = line.trim();
+    lines.forEach((line, index) => {
+        // 1. ดึงวันที่และเวลา (หาบรรทัดที่มีคำว่า 'เวลา' และดึงบรรทัดก่อนหน้ามาเป็นวันที่)
+        if (line.includes('เวลา')) {
+            timeLine = line;
+            if (index > 0 && !lines[index - 1].includes('เรียน')) {
+                dateLine = lines[index - 1];
+            }
+        }
+        
+        // 2. หาชื่อเจ้าหน้าที่ (เช็คจากตัวเลข 1. 2. หรือคำว่า พลฯ, นาย, นาง, น.ส., เจ้าหน้าที่)
+        if (/^[1-9]\./.test(line) || line.includes('พลฯ') || line.includes('นาย') || line.includes('นาง') || line.includes('เจ้าหน้าที่')) {
+            // ตัดตัวเลข 1. 2. ข้างหน้าออกให้เหลือแต่ชื่อ
+            guardList.push(line.replace(/^[1-9]\.\s*/, '').trim());
+        }
     });
+
+    // นำวันที่และเวลามาต่อกัน
+    if (dateLine || timeLine) {
+        time = `${dateLine} ${timeLine}`.trim();
+    }
+
+    // ถ้าระบุชื่อ รปภ. หลายคน ให้นำชื่อมาต่อกันด้วยลูกน้ำ (,)
+    if (guardList.length > 0) {
+        guardName = guardList.join(', ');
+    }
+
     return { time, guardName, raw_text: text };
 }
 
