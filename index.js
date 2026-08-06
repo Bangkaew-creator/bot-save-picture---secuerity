@@ -24,8 +24,8 @@ const client = new line.messagingApi.MessagingApiClient({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
 });
 
-// ไคลเอนต์สำหรับดาวน์โหลดไฟล์รูปภาพ (เพิ่มใหม่)
-const blobClient = new line.messagingApiBlob.MessagingApiBlobClient({
+// ไคลเอนต์สำหรับดาวน์โหลดไฟล์รูปภาพ (แก้ไขคำผิดตรงนี้ครับ)
+const blobClient = new line.messagingApi.MessagingApiBlobClient({
   channelAccessToken: process.env.LINE_CHANNEL_ACCESS_TOKEN
 });
 
@@ -127,7 +127,7 @@ async function handleEvent(event) {
       if (!userState) return Promise.resolve(null);
 
       try {
-          // ใช้ blobClient โหลดรูปภาพ
+          // โหลดรูปภาพ
           const stream = await blobClient.getMessageContent(event.message.id);
           const chunks = [];
           for await (const chunk of stream) {
@@ -135,7 +135,7 @@ async function handleEvent(event) {
           }
           const buffer = Buffer.concat(chunks);
 
-          // ใช้ Sharp บีบอัดรูปภาพ
+          // บีบอัดรูปภาพ
           const compressedBuffer = await sharp(buffer)
               .resize({ width: 800, withoutEnlargement: true })
               .jpeg({ quality: 80 })
